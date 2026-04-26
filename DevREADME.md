@@ -1,6 +1,6 @@
 # Auto Descriptor Module
 
-This module enhances GitLab merge requests by generating description updates, optional inline suggestions, and an optional standalone MR note with confidence, risk, effect tags, optimization hints, missing-test notes, and deterministic score rules derived from the diff.
+This module enhances GitLab merge requests and GitHub pull requests by generating description updates, optional inline suggestions, and an optional standalone note/comment with confidence, risk, effect tags, optimization hints, missing-test notes, and deterministic score rules derived from the diff.
 
 ## Domain-Oriented Layout
 
@@ -21,14 +21,49 @@ This module enhances GitLab merge requests by generating description updates, op
 ## Runtime Flow
 
 1. Read CI env vars and prompt/template files.
-2. Fetch MR description and detect enablement markers.
+2. Resolve VCS provider client (GitLab or GitHub), then fetch MR/PR description and detect enablement markers.
 3. Validate template (when description update is enabled).
-4. Fetch MR diff context and derive deterministic confidence context.
+4. Fetch diff context and derive deterministic confidence context.
 5. Build policy-gated generation plan and ask Gemini only for enabled sections (single nested JSON response; primary model first, fallback model on primary API failure after retries).
 6. Normalize payload fields (suggestions, tags, lists, etc.).
-7. Update MR description when enabled (Gemini markdown only; no injected risk/confidence metadata in the description).
-8. Create standalone confidence / review metadata MR note (history-preserving; one note per new commit SHA) when enabled.
+7. Update MR/PR description when enabled (Gemini markdown only; no injected risk/confidence metadata in the description).
+8. Create standalone confidence / review metadata note/comment (history-preserving; one note per new commit SHA) when enabled.
 9. Publish inline suggestions only on changed lines when enabled.
+
+## Provider Selection
+
+- Runtime selection is hybrid:
+  - explicit override via `CI_PROVIDER=gitlab|github`
+  - otherwise auto-detect from CI context
+- Auto-detect rules:
+  - GitHub when `GITHUB_REPOSITORY` is present
+  - GitLab when `CI_API_V4_URL`, `CI_PROJECT_ID`, and `CI_MERGE_REQUEST_IID` are present
+  - fails fast if both contexts are present (ambiguous) or neither can be detected
+- Existing GitLab behavior remains the default when running in GitLab CI.
+
+## Provider Runtime Environment
+
+### GitLab
+
+- Context:
+  - `CI_API_V4_URL`
+  - `CI_PROJECT_ID`
+  - `CI_MERGE_REQUEST_IID`
+- Auth:
+  - `GITLAB_TOKEN` (preferred) or `CI_JOB_TOKEN`
+
+### GitHub (GitHub Actions Native)
+
+- Context:
+  - `GITHUB_REPOSITORY` (`owner/repo`)
+  - PR number resolved from one of:
+    - `GITHUB_PR_NUMBER` (optional explicit override)
+    - `GITHUB_EVENT_PATH` payload when `GITHUB_EVENT_NAME=pull_request`
+    - `GITHUB_REF` in `refs/pull/<n>/...` format
+  - optional `GITHUB_API_URL` (defaults to `https://api.github.com`)
+- Auth precedence:
+  - `GITHUB_API_TOKEN` first
+  - fallback to `GITHUB_TOKEN` (standard GitHub Actions token)
 
 ## Orchestration Stages
 
@@ -81,7 +116,7 @@ These markers are independent; any combination can be enabled.
 
 ## Runtime Path Hint Configuration
 
-Only these confidence hint groups are customizable at runtime (via CI vars in `.gitlab/merge-polisher.yml`):
+Only these confidence hint groups are customizable at runtime (via CI env vars):
 
 - `MERGE_POLISHER_SERVICE_PATH_HINTS`
 - `MERGE_POLISHER_CRITICAL_PATH_HINTS`
@@ -100,7 +135,7 @@ Invalid JSON fails fast with clear error message.
 - Adjust confidence behavior in `confidence_domain.py` and related constants in `constants.py`.
 - Adjust Gemini output contract/rules in `gemini_client.py`.
 - Adjust markdown placement/formatting in `description_domain.py`.
-- Adjust confidence comment lifecycle in `gitlab_client.py` note upsert helpers.
+- Adjust provider-specific lifecycle details in `adapters/gitlab/client.py` or `adapters/github/client.py`.
 - Keep `app.py` focused on sequencing and side effects; avoid embedding domain logic there.
 
 ## How to Extend Safely
@@ -116,4 +151,5 @@ Invalid JSON fails fast with clear error message.
 - `test_policy.py`: policy matrix and strict/relaxed validation semantics.
 - `test_confidence_comment.py`: SHA dedupe behavior for confidence notes.
 - `test_suggestions_gate.py`: changed-line eligibility and skip gating for inline suggestions.
-- Existing domain/client tests (`test_gemini_client.py`, `test_gitlab_client.py`, etc.) continue to validate module-local behavior.
+- Existing domain/client tests (`test_gemini_client.py`, `test_gitlab_client.py`, `test_github_client.py`, etc.) continue to validate module-local behavior.
+- `test_vcs_provider.py`: provider resolution matrix (explicit, auto-detect, ambiguity).

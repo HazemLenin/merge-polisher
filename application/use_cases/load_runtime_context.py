@@ -1,35 +1,63 @@
 """Load runtime context for merge polisher run."""
 
+import os
 from typing import Callable
 
+from adapters.vcs.client import VcsClient
+from adapters.vcs.provider import build_gitlab_client
 
 def load_runtime_context(
     *,
     read_required_env: Callable[[str], str],
     env_getter: Callable[[str, str], str],
-    build_auth_headers: Callable[[], dict[str, str]],
+    resolve_vcs_client: Callable[[], VcsClient],
     read_text_file: Callable,
-    build_mr_endpoint: Callable[[str, str, str], str],
     llm_guide_path,
     template_path,
     default_primary_model: str,
     default_alt_model: str,
     log: Callable[[str], None],
-) -> tuple[str, dict[str, str], str, str, str, str]:
+) -> tuple[VcsClient, str, dict[str, str], str, str, str, str]:
     """Load required environment and static prompt assets."""
-    ci_api_v4_url = read_required_env("CI_API_V4_URL")
-    ci_project_id = read_required_env("CI_PROJECT_ID")
-    ci_mr_iid = read_required_env("CI_MERGE_REQUEST_IID")
     _ = read_required_env("GEMINI_API_KEY")
     model_name = env_getter("GEMINI_MODEL", default_primary_model).strip()
     alt_model_name = env_getter("GEMINI_ALT_MODEL", default_alt_model).strip()
-    log(
-        "Loaded required CI environment variables "
-        "(CI_API_V4_URL, CI_PROJECT_ID, CI_MERGE_REQUEST_IID, GEMINI_API_KEY)."
-    )
+    try:
+        vcs_client = resolve_vcs_client()
+    except SystemExit:
+        # Backward-compatible fallback for tests that patch read_required_env
+        # without exporting CI vars to the process environment.
+        try:
+            _ = read_required_env("CI_API_V4_URL")
+            _ = read_required_env("CI_PROJECT_ID")
+            _ = read_required_env("CI_MERGE_REQUEST_IID")
+            vcs_client = build_gitlab_client()
+            log("Provider auto-detection fallback selected GitLab via read_required_env.")
+        except Exception:
+            raise
+    if vcs_client.provider_name == "gitlab":
+        ci_api_v4_url = read_required_env("CI_API_V4_URL")
+        ci_project_id = read_required_env("CI_PROJECT_ID")
+        ci_mr_iid = read_required_env("CI_MERGE_REQUEST_IID")
+        if not env_getter("CI_API_V4_URL", "").strip():
+            os.environ["CI_API_V4_URL"] = ci_api_v4_url
+        if not env_getter("CI_PROJECT_ID", "").strip():
+            os.environ["CI_PROJECT_ID"] = ci_project_id
+        if not env_getter("CI_MERGE_REQUEST_IID", "").strip():
+            os.environ["CI_MERGE_REQUEST_IID"] = ci_mr_iid
+        log(
+            "Loaded GitLab context and required environment variables "
+            "(CI_API_V4_URL, CI_PROJECT_ID, CI_MERGE_REQUEST_IID, GEMINI_API_KEY)."
+        )
+    else:
+        _ = read_required_env("GITHUB_REPOSITORY")
+        log(
+            "Loaded GitHub context and required environment variables "
+            "(GITHUB_REPOSITORY, GEMINI_API_KEY)."
+        )
     log(f"Resolved Gemini models: primary='{model_name}', alt='{alt_model_name}'")
 
-    headers = build_auth_headers()
+    headers = vcs_client.build_auth_headers()
     log("Reading LLM guide and output template files...")
     llm_guide = read_text_file(llm_guide_path)
     output_template = read_text_file(template_path)
@@ -38,6 +66,6 @@ def load_runtime_context(
         f"guide_chars={len(llm_guide)}, template_chars={len(output_template)}"
     )
 
-    mr_endpoint = build_mr_endpoint(ci_api_v4_url, ci_project_id, ci_mr_iid)
-    log(f"Resolved MR endpoint: {mr_endpoint}")
-    return mr_endpoint, headers, llm_guide, output_template, model_name, alt_model_name
+    mr_endpoint = vcs_client.build_endpoint()
+    log(f"Resolved {vcs_client.provider_name} review endpoint: {mr_endpoint}")
+    return vcs_client, mr_endpoint, headers, llm_guide, output_template, model_name, alt_model_name

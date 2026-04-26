@@ -1,25 +1,66 @@
-"""GitLab API client helpers with retry behavior."""
+"""GitHub pull request API client helpers."""
 
 import json
+import os
 import re
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
-from adapters.vcs.client import VcsClient
 from core.constants import MAX_DIFF_CONTEXT_CHARS, MAX_DIFF_FILES, MAX_PATCH_CHARS_PER_FILE
-
 from core.runtime import fail, log
 
 
-def build_mr_endpoint(ci_api_v4_url: str, ci_project_id: str, ci_mr_iid: str) -> str:
-    """Build the GitLab API endpoint for the current merge request."""
-    return (
-        f"{ci_api_v4_url}/projects/{urllib.parse.quote(ci_project_id, safe='')}"
-        f"/merge_requests/{urllib.parse.quote(ci_mr_iid, safe='')}"
-    )
+def build_pr_endpoint() -> str:
+    """Build GitHub PR endpoint from GitHub Actions context."""
+    repository = os.getenv("GITHUB_REPOSITORY", "").strip()
+    if not repository or "/" not in repository:
+        fail("Missing or invalid GITHUB_REPOSITORY (expected 'owner/repo').")
+    owner, repo = repository.split("/", 1)
+    api_url = os.getenv("GITHUB_API_URL", "https://api.github.com").strip().rstrip("/")
+    pr_number = _resolve_pr_number()
+    return f"{api_url}/repos/{owner}/{repo}/pulls/{pr_number}"
+
+
+def _resolve_pr_number() -> str:
+    explicit = os.getenv("GITHUB_PR_NUMBER", "").strip()
+    if explicit:
+        return explicit
+
+    event_name = os.getenv("GITHUB_EVENT_NAME", "").strip()
+    event_path = os.getenv("GITHUB_EVENT_PATH", "").strip()
+    if event_name == "pull_request" and event_path:
+        try:
+            with open(event_path, "r", encoding="utf-8") as file_obj:
+                payload = json.load(file_obj)
+            number = str((payload.get("pull_request") or {}).get("number") or "").strip()
+            if number:
+                return number
+        except (OSError, json.JSONDecodeError):
+            pass
+
+    ref = os.getenv("GITHUB_REF", "").strip()
+    ref_match = re.match(r"^refs/pull/(\d+)/", ref)
+    if ref_match:
+        return ref_match.group(1)
+
+    fail("Unable to resolve pull request number from GitHub Actions context.")
+    return ""
+
+
+def build_auth_headers() -> dict[str, str]:
+    """Build GitHub auth headers using configured token precedence."""
+    token = os.getenv("GITHUB_API_TOKEN", "").strip() or os.getenv("GITHUB_TOKEN", "").strip()
+    if not token:
+        fail("Missing GitHub auth token. Provide GITHUB_API_TOKEN or GITHUB_TOKEN.")
+    return {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+        "Content-Type": "application/json",
+    }
 
 
 def request_json(
@@ -29,8 +70,8 @@ def request_json(
     body: Optional[bytes] = None,
     retries: int = 3,
     timeout_seconds: int = 30,
-) -> Dict:
-    """Send a GitLab request and decode JSON response with retries."""
+) -> Any:
+    """Send a GitHub request and decode JSON response with retries."""
     last_error: Optional[Exception] = None
     for attempt in range(1, retries + 1):
         try:
@@ -45,37 +86,62 @@ def request_json(
             if attempt < retries:
                 sleep_seconds = attempt * 2
                 log(
-                    f"GitLab API call failed (attempt {attempt}/{retries}): {exc}. "
+                    f"GitHub API call failed (attempt {attempt}/{retries}): {exc}. "
                     f"Retrying in {sleep_seconds}s..."
                 )
                 time.sleep(sleep_seconds)
             else:
                 break
 
-    fail(f"GitLab API call failed after {retries} attempts: {last_error}")
+    fail(f"GitHub API call failed after {retries} attempts: {last_error}")
     return {}
 
 
 def fetch_mr_description(endpoint: str, headers: Dict[str, str]) -> str:
-    """Fetch and return current MR description content."""
-    mr_data = request_json("GET", endpoint, headers=headers)
-    description = (mr_data.get("description") or "").strip()
+    """Fetch and return current pull request body."""
+    pr_data = request_json("GET", endpoint, headers=headers)
+    description = str(pr_data.get("body") or "").strip()
     if not description:
-        fail("Merge request description is empty; cannot auto-enhance.")
+        fail("Pull request description is empty; cannot auto-enhance.")
     return description
 
 
-def fetch_mr_changes(endpoint: str, headers: Dict[str, str]) -> Dict:
-    """Fetch merge request changes metadata and patch list."""
-    changes_endpoint = f"{endpoint}/changes"
-    mr_data = request_json("GET", changes_endpoint, headers=headers)
-    changes = mr_data.get("changes")
-    if not isinstance(changes, list):
-        fail("GitLab merge request changes payload is missing or invalid.")
-    return mr_data
+def fetch_mr_changes(endpoint: str, headers: Dict[str, str]) -> Dict[str, Any]:
+    """Fetch PR metadata with files list under GitLab-compatible shape."""
+    pr_data = request_json("GET", endpoint, headers=headers)
+    files_endpoint = f"{endpoint}/files?per_page=100"
+    files_payload = request_json("GET", files_endpoint, headers=headers)
+    if not isinstance(files_payload, list):
+        fail("GitHub pull request files payload is missing or invalid.")
+
+    changes: list[dict[str, Any]] = []
+    for item in files_payload:
+        if not isinstance(item, dict):
+            continue
+        status = str(item.get("status") or "").strip().lower()
+        new_path = str(item.get("filename") or "").strip()
+        old_path = str(item.get("previous_filename") or new_path).strip()
+        changes.append(
+            {
+                "new_path": new_path,
+                "old_path": old_path,
+                "renamed_file": status == "renamed",
+                "new_file": status == "added",
+                "deleted_file": status == "removed",
+                "diff": str(item.get("patch") or ""),
+            }
+        )
+
+    return {
+        "source_branch": str((pr_data.get("head") or {}).get("ref") or "").strip(),
+        "target_branch": str((pr_data.get("base") or {}).get("ref") or "").strip(),
+        "head_sha": str((pr_data.get("head") or {}).get("sha") or "").strip(),
+        "base_sha": str((pr_data.get("base") or {}).get("sha") or "").strip(),
+        "changes": changes,
+    }
 
 
-def build_diff_context(mr_changes: Dict) -> str:
+def build_diff_context(mr_changes: Dict[str, Any]) -> str:
     """Build bounded prompt context from source-vs-target branch changes."""
     source_branch = (mr_changes.get("source_branch") or "").strip() or "unknown-source"
     target_branch = (mr_changes.get("target_branch") or "").strip() or "unknown-target"
@@ -84,7 +150,7 @@ def build_diff_context(mr_changes: Dict) -> str:
         return ""
 
     lines = [
-        "Merge Request Diff Context (source branch compared to target branch):",
+        "Pull Request Diff Context (source branch compared to target branch):",
         f"Source branch: {source_branch}",
         f"Target branch: {target_branch}",
         "",
@@ -122,7 +188,7 @@ def build_diff_context(mr_changes: Dict) -> str:
             lines.append(capped_patch)
             lines.append("```")
         else:
-            lines.append("_No textual patch available from GitLab for this file._")
+            lines.append("_No textual patch available from GitHub for this file._")
         lines.append("")
 
     if len(changes) > MAX_DIFF_FILES:
@@ -147,29 +213,22 @@ def build_diff_context(mr_changes: Dict) -> str:
 
 
 def update_mr_description(endpoint: str, headers: Dict[str, str], description: str) -> None:
-    """Update MR description in GitLab."""
-    payload = urllib.parse.urlencode({"description": description}).encode("utf-8")
-    request_json("PUT", endpoint, headers=headers, body=payload)
+    """Update pull request body in GitHub."""
+    payload = json.dumps({"body": description}).encode("utf-8")
+    request_json("PATCH", endpoint, headers=headers, body=payload)
 
 
 def fetch_mr_versions(endpoint: str, headers: Dict[str, str]) -> Dict[str, str]:
-    """Fetch latest MR versions and return SHAs for discussion positions."""
-    versions_endpoint = f"{endpoint}/versions"
-    versions_payload = request_json("GET", versions_endpoint, headers=headers)
-    if not isinstance(versions_payload, list) or not versions_payload:
-        fail("Unable to fetch merge request versions for inline suggestions.")
-
-    latest = versions_payload[0]
-    base_sha = (latest.get("base_commit_sha") or "").strip()
-    start_sha = (latest.get("start_commit_sha") or "").strip()
-    head_sha = (latest.get("head_commit_sha") or "").strip()
-    if not base_sha or not start_sha or not head_sha:
-        fail("Merge request versions payload missing required SHAs.")
-
-    return {"base_sha": base_sha, "start_sha": start_sha, "head_sha": head_sha}
+    """Fetch latest PR base/head SHAs for comments."""
+    pr_data = request_json("GET", endpoint, headers=headers)
+    base_sha = str((pr_data.get("base") or {}).get("sha") or "").strip()
+    head_sha = str((pr_data.get("head") or {}).get("sha") or "").strip()
+    if not base_sha or not head_sha:
+        fail("Pull request payload missing required SHAs.")
+    return {"base_sha": base_sha, "start_sha": base_sha, "head_sha": head_sha}
 
 
-def build_changed_new_lines(mr_changes: Dict) -> Dict[str, Set[int]]:
+def build_changed_new_lines(mr_changes: Dict[str, Any]) -> Dict[str, Set[int]]:
     """Collect changed line numbers on the new side for each file."""
     results: Dict[str, Set[int]] = {}
     hunk_header = re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@")
@@ -208,7 +267,6 @@ def build_changed_new_lines(mr_changes: Dict) -> Dict[str, Set[int]]:
 
 
 def _leading_whitespace_prefix(line: str) -> str:
-    """Return leading spaces and tabs on a line."""
     index = 0
     while index < len(line) and line[index] in " \t":
         index += 1
@@ -220,7 +278,7 @@ def _normalize_repo_path(path: str) -> str:
 
 
 def get_plus_line_content_at(
-    mr_changes: Dict, file_path: str, target_new_line: int
+    mr_changes: Dict[str, Any], file_path: str, target_new_line: int
 ) -> Optional[str]:
     """Return new-side line text (without diff '+') for a changed line, if present."""
     target_path = _normalize_repo_path(file_path)
@@ -258,12 +316,6 @@ def get_plus_line_content_at(
 
 
 def align_suggested_code_indent(reference_line: str, suggested_code: str) -> str:
-    """
-    Align suggestion block to the reference line's leading whitespace.
-
-    GitLab applies ```suggestion``` as a literal replacement; outer indent must
-    match the file. Models often omit indentation, which breaks Python.
-    """
     ref_prefix = _leading_whitespace_prefix(reference_line)
     raw = suggested_code.rstrip("\n")
     if not raw.strip():
@@ -287,9 +339,8 @@ def align_suggested_code_indent(reference_line: str, suggested_code: str) -> str
 
 
 def normalize_inline_suggestion_code(
-    mr_changes: Dict, file_path: str, new_line: int, suggested_code: str
+    mr_changes: Dict[str, Any], file_path: str, new_line: int, suggested_code: str
 ) -> str:
-    """Best-effort indent fix for inline suggestions using MR diff context."""
     reference = get_plus_line_content_at(mr_changes, file_path, new_line)
     if reference is None:
         return suggested_code
@@ -305,40 +356,43 @@ def create_mr_inline_discussion(
     summary: str,
     suggested_code: str,
 ) -> None:
-    """Create an inline MR discussion with a GitLab suggestion block."""
-    discussions_endpoint = f"{endpoint}/discussions"
+    """Create an inline PR review comment with a GitHub suggestion block."""
+    comments_endpoint = f"{endpoint}/comments"
     body_text = (
         f"{summary.strip()}\n\n"
         "```suggestion\n"
         f"{suggested_code.rstrip()}\n"
         "```"
     )
-
-    payload_data = {
-        "body": body_text,
-        "position[position_type]": "text",
-        "position[base_sha]": versions["base_sha"],
-        "position[start_sha]": versions["start_sha"],
-        "position[head_sha]": versions["head_sha"],
-        "position[new_path]": file_path,
-        "position[new_line]": str(new_line),
-    }
-    payload = urllib.parse.urlencode(payload_data).encode("utf-8")
-    request_json("POST", discussions_endpoint, headers=headers, body=payload)
+    payload = json.dumps(
+        {
+            "body": body_text,
+            "commit_id": versions["head_sha"],
+            "path": file_path,
+            "line": int(new_line),
+            "side": "RIGHT",
+        }
+    ).encode("utf-8")
+    request_json("POST", comments_endpoint, headers=headers, body=payload)
 
 
-def fetch_mr_notes(endpoint: str, headers: Dict[str, str]) -> List[Dict]:
-    """Fetch top-level merge request notes."""
-    notes_endpoint = f"{endpoint}/notes"
+def _to_issue_comments_endpoint(endpoint: str) -> str:
+    if "/pulls/" not in endpoint:
+        fail("Invalid pull request endpoint format for comments.")
+    return endpoint.replace("/pulls/", "/issues/") + "/comments"
+
+
+def fetch_mr_notes(endpoint: str, headers: Dict[str, str]) -> List[Dict[str, Any]]:
+    """Fetch top-level pull request issue comments."""
+    notes_endpoint = _to_issue_comments_endpoint(endpoint)
     notes_payload = request_json("GET", notes_endpoint, headers=headers)
     if not isinstance(notes_payload, list):
-        fail("Unable to fetch merge request notes.")
+        fail("Unable to fetch pull request comments.")
     return [note for note in notes_payload if isinstance(note, dict)]
 
 
-def filter_notes_by_signature(notes: List[Dict], signature: str) -> List[Dict]:
-    """Return only notes that contain the given signature token."""
-    matches: List[Dict] = []
+def filter_notes_by_signature(notes: List[Dict[str, Any]], signature: str) -> List[Dict[str, Any]]:
+    matches: List[Dict[str, Any]] = []
     for note in notes:
         note_body = str(note.get("body") or "")
         if signature in note_body:
@@ -346,13 +400,13 @@ def filter_notes_by_signature(notes: List[Dict], signature: str) -> List[Dict]:
     return matches
 
 
-def fetch_mr_notes_by_signature(endpoint: str, headers: Dict[str, str], signature: str) -> List[Dict]:
-    """Fetch MR notes and keep only signature-matching notes."""
+def fetch_mr_notes_by_signature(
+    endpoint: str, headers: Dict[str, str], signature: str
+) -> List[Dict[str, Any]]:
     return filter_notes_by_signature(fetch_mr_notes(endpoint, headers), signature)
 
 
-def get_latest_note_by_id(notes: List[Dict]) -> Optional[Dict]:
-    """Return latest note by numeric id, when available."""
+def get_latest_note_by_id(notes: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     with_id = [note for note in notes if isinstance(note.get("id"), int)]
     if with_id:
         return max(with_id, key=lambda note: int(note["id"]))
@@ -360,7 +414,6 @@ def get_latest_note_by_id(notes: List[Dict]) -> Optional[Dict]:
 
 
 def extract_sha_from_note_body(note_body: str, sha_marker_prefix: str) -> Optional[str]:
-    """Extract embedded SHA from hidden comment marker."""
     start_index = note_body.find(sha_marker_prefix)
     if start_index < 0:
         return None
@@ -372,57 +425,10 @@ def extract_sha_from_note_body(note_body: str, sha_marker_prefix: str) -> Option
     return sha_value or None
 
 
-def create_mr_note(endpoint: str, headers: Dict[str, str], body: str) -> Dict:
-    """Create a top-level merge request note."""
-    notes_endpoint = f"{endpoint}/notes"
-    payload = urllib.parse.urlencode({"body": body}).encode("utf-8")
+def create_mr_note(endpoint: str, headers: Dict[str, str], body: str) -> Dict[str, Any]:
+    notes_endpoint = _to_issue_comments_endpoint(endpoint)
+    payload = json.dumps({"body": body}).encode("utf-8")
     response = request_json("POST", notes_endpoint, headers=headers, body=payload)
     if not isinstance(response, dict):
-        fail("GitLab returned invalid payload while creating MR note.")
+        fail("GitHub returned invalid payload while creating pull request comment.")
     return response
-
-
-def update_mr_note(endpoint: str, headers: Dict[str, str], note_id: int, body: str) -> Dict:
-    """Update an existing top-level merge request note."""
-    note_endpoint = f"{endpoint}/notes/{note_id}"
-    payload = urllib.parse.urlencode({"body": body}).encode("utf-8")
-    response = request_json("PUT", note_endpoint, headers=headers, body=payload)
-    if not isinstance(response, dict):
-        fail("GitLab returned invalid payload while updating MR note.")
-    return response
-
-
-def upsert_mr_note_by_signature(
-    endpoint: str, headers: Dict[str, str], body: str, signature: str
-) -> str:
-    """Update existing signature-matching note or create one."""
-    notes = fetch_mr_notes_by_signature(endpoint, headers, signature)
-    for note in notes:
-        note_body = str(note.get("body") or "")
-        note_id = note.get("id")
-        if signature in note_body and isinstance(note_id, int):
-            update_mr_note(endpoint, headers, note_id=note_id, body=body)
-            return "updated"
-    create_mr_note(endpoint, headers, body=body)
-    return "created"
-
-
-def build_client(*, build_endpoint, build_auth_headers) -> VcsClient:
-    """Build a provider-agnostic client backed by GitLab API helpers."""
-    return VcsClient(
-        provider_name="gitlab",
-        build_endpoint=build_endpoint,
-        build_auth_headers=build_auth_headers,
-        fetch_description=fetch_mr_description,
-        fetch_changes=fetch_mr_changes,
-        build_diff_context=build_diff_context,
-        update_description=update_mr_description,
-        fetch_versions=fetch_mr_versions,
-        build_changed_new_lines=build_changed_new_lines,
-        normalize_inline_suggestion_code=normalize_inline_suggestion_code,
-        create_inline_discussion=create_mr_inline_discussion,
-        fetch_notes_by_signature=fetch_mr_notes_by_signature,
-        get_latest_note_by_id=get_latest_note_by_id,
-        extract_sha_from_note_body=extract_sha_from_note_body,
-        create_note=create_mr_note,
-    )

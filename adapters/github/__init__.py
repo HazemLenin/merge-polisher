@@ -1,0 +1,2 @@
+"""GitHub adapter package."""
+
