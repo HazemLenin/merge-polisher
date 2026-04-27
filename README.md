@@ -1,7 +1,34 @@
-# merge_polisher
+# Merge Polisher
 
 <p align="center">
   <img src="assets/Logo%20Rounded.png" alt="merge_polisher logo" width="220" />
+</p>
+
+<p align="center">
+  <a href="https://github.com/HazemLenin/merge-polisher/stargazers">
+    <img alt="stars" src="https://img.shields.io/github/stars/HazemLenin/merge-polisher?style=for-the-badge" />
+  </a>
+  <a href="https://github.com/HazemLenin/merge-polisher/network/members">
+    <img alt="forks" src="https://img.shields.io/github/forks/HazemLenin/merge-polisher?style=for-the-badge" />
+  </a>
+  <a href="https://github.com/HazemLenin/merge-polisher/watchers">
+    <img alt="watchers" src="https://img.shields.io/github/watchers/HazemLenin/merge-polisher?style=for-the-badge" />
+  </a>
+  <a href="https://github.com/HazemLenin/merge-polisher/issues">
+    <img alt="issues" src="https://img.shields.io/github/issues/HazemLenin/merge-polisher?style=for-the-badge" />
+  </a>
+  <a href="https://github.com/HazemLenin/merge-polisher/pulls">
+    <img alt="pull requests" src="https://img.shields.io/github/issues-pr/HazemLenin/merge-polisher?style=for-the-badge" />
+  </a>
+  <a href="https://github.com/HazemLenin/merge-polisher/commits/main">
+    <img alt="last commit" src="https://img.shields.io/github/last-commit/HazemLenin/merge-polisher?style=for-the-badge" />
+  </a>
+  <a href="https://github.com/HazemLenin/merge-polisher">
+    <img alt="repo size" src="https://img.shields.io/github/repo-size/HazemLenin/merge-polisher?style=for-the-badge" />
+  </a>
+  <a href="https://github.com/HazemLenin/merge-polisher/blob/main/LICENSE">
+    <img alt="license" src="https://img.shields.io/github/license/HazemLenin/merge-polisher?style=for-the-badge" />
+  </a>
 </p>
 
 <p align="center">
