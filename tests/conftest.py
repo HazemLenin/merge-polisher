@@ -4,6 +4,45 @@ import pytest
 
 
 @pytest.fixture
+def provider() -> str:
+    """VCS provider under test for app-level integration tests."""
+    return "gitlab"
+
+
+@pytest.fixture
+def clean_provider_env(monkeypatch) -> None:
+    """Clear provider-selection and auth env to avoid host leakage."""
+    for key in (
+        "CI_PROVIDER",
+        "GITHUB_REPOSITORY",
+        "GITHUB_TOKEN",
+        "GITHUB_API_TOKEN",
+        "CI_API_V4_URL",
+        "CI_PROJECT_ID",
+        "CI_MERGE_REQUEST_IID",
+        "CI_JOB_TOKEN",
+        "GITLAB_TOKEN",
+    ):
+        monkeypatch.delenv(key, raising=False)
+
+
+@pytest.fixture
+def provider_required_env(provider: str) -> dict[str, str]:
+    """Required env values consumed through read_required_env."""
+    if provider == "github":
+        return {
+            "GITHUB_REPOSITORY": "acme/repo",
+            "GEMINI_API_KEY": "k",
+        }
+    return {
+        "CI_API_V4_URL": "https://gitlab/api/v4",
+        "CI_PROJECT_ID": "1",
+        "CI_MERGE_REQUEST_IID": "2",
+        "GEMINI_API_KEY": "k",
+    }
+
+
+@pytest.fixture
 def minimal_mr_description() -> str:
     """MR body with required AutoDescriptor markers and extract_required_inputs fields."""
     return """<!-- auto-descriptor:on -->

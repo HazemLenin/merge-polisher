@@ -2,17 +2,72 @@
 
 from typing import Any
 
+import pytest
+
 import app as app_mod
+from adapters.vcs.client import VcsClient
 from core.constants import CONFIDENCE_COMMENT_SIGNATURE
 
 
-def _fake_env(name: str) -> str:
-    return {
-        "CI_API_V4_URL": "https://gitlab/api/v4",
-        "CI_PROJECT_ID": "1",
-        "CI_MERGE_REQUEST_IID": "2",
-        "GEMINI_API_KEY": "k",
-    }[name]
+@pytest.fixture(params=["gitlab", "github"])
+def provider(request) -> str:
+    return request.param
+
+
+@pytest.fixture(autouse=True)
+def configure_provider_runtime(
+    monkeypatch,
+    provider: str,
+    clean_provider_env,
+    provider_required_env,
+) -> None:
+    monkeypatch.setenv("CI_PROVIDER", provider)
+    if provider == "github":
+        monkeypatch.setenv("GITHUB_REPOSITORY", "acme/repo")
+        monkeypatch.setenv("GITHUB_TOKEN", "token")
+    else:
+        monkeypatch.setenv("CI_API_V4_URL", "https://gitlab/api/v4")
+        monkeypatch.setenv("CI_PROJECT_ID", "1")
+        monkeypatch.setenv("CI_MERGE_REQUEST_IID", "2")
+        monkeypatch.setenv("CI_JOB_TOKEN", "token")
+        monkeypatch.delenv("GITLAB_TOKEN", raising=False)
+
+    monkeypatch.setattr(app_mod, "read_required_env", lambda name: provider_required_env[name])
+    monkeypatch.setattr(
+        app_mod,
+        "resolve_vcs_client",
+        lambda: VcsClient(
+            provider_name=provider,
+            build_endpoint=lambda: "https://example.test/mr/1",
+            build_auth_headers=lambda: {},
+            fetch_description=lambda endpoint, headers: app_mod.fetch_mr_description(endpoint, headers),
+            fetch_changes=lambda endpoint, headers: app_mod.fetch_mr_changes(endpoint, headers),
+            build_diff_context=lambda changes: "diff-context",
+            update_description=lambda endpoint, headers, body: app_mod.update_mr_description(endpoint, headers, body),
+            fetch_versions=lambda endpoint, headers: app_mod.fetch_mr_versions(endpoint, headers),
+            build_changed_new_lines=lambda changes: app_mod.build_changed_new_lines(changes),
+            normalize_inline_suggestion_code=lambda changes, file_path, new_line, suggested_code: app_mod.normalize_inline_suggestion_code(
+                changes, file_path, new_line, suggested_code
+            ),
+            create_inline_discussion=lambda endpoint, headers, file_path, new_line, versions, summary, suggested_code: app_mod.create_mr_inline_discussion(
+                endpoint=endpoint,
+                headers=headers,
+                file_path=file_path,
+                new_line=new_line,
+                versions=versions,
+                summary=summary,
+                suggested_code=suggested_code,
+            ),
+            fetch_notes_by_signature=lambda endpoint, headers, signature: app_mod.fetch_mr_notes_by_signature(
+                endpoint, headers, signature
+            ),
+            get_latest_note_by_id=lambda notes: app_mod.get_latest_note_by_id(notes),
+            extract_sha_from_note_body=lambda body, prefix: app_mod.extract_sha_from_note_body(body, prefix),
+            create_note=lambda endpoint, headers, body: app_mod.create_mr_note(
+                endpoint=endpoint, headers=headers, body=body
+            ),
+        ),
+    )
 
 
 def _build_description(*markers: str) -> str:
@@ -54,9 +109,6 @@ def _default_payload() -> dict[str, Any]:
 
 
 def _setup_common(monkeypatch, description: str, mr_changes: dict[str, Any], notes: list[dict[str, Any]]) -> None:
-    monkeypatch.setenv("CI_JOB_TOKEN", "token")
-    monkeypatch.delenv("GITLAB_TOKEN", raising=False)
-    monkeypatch.setattr(app_mod, "read_required_env", _fake_env)
     monkeypatch.setattr(app_mod, "read_text_file", lambda _path: "file-content\n")
     monkeypatch.setattr(app_mod, "fetch_mr_description", lambda _e, _h: description)
     monkeypatch.setattr(app_mod, "fetch_mr_changes", lambda _e, _h: mr_changes)

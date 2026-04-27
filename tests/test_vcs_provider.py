@@ -20,6 +20,17 @@ def test_resolve_vcs_client_prefers_explicit_provider(monkeypatch) -> None:
     assert client.provider_name == "github"
 
 
+def test_resolve_vcs_client_prefers_explicit_provider_when_opposite_keys_exist(monkeypatch) -> None:
+    _clear_provider_env(monkeypatch)
+    monkeypatch.setenv("CI_PROVIDER", "gitlab")
+    monkeypatch.setenv("GITHUB_REPOSITORY", "acme/repo")
+    monkeypatch.setenv("CI_API_V4_URL", "https://gitlab/api/v4")
+    monkeypatch.setenv("CI_PROJECT_ID", "1")
+    monkeypatch.setenv("CI_MERGE_REQUEST_IID", "2")
+    client = resolve_vcs_client()
+    assert client.provider_name == "gitlab"
+
+
 def test_resolve_vcs_client_auto_detects_github(monkeypatch) -> None:
     _clear_provider_env(monkeypatch)
     monkeypatch.setenv("GITHUB_REPOSITORY", "acme/repo")
