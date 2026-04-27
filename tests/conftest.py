@@ -53,6 +53,10 @@ def minimal_mr_description() -> str:
 
 Short summary.
 
+### Issue Key
+
+XX-1000
+
 ### Problem Brief
 
 Something was broken.

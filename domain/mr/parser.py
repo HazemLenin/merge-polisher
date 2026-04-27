@@ -31,6 +31,10 @@ def extract_labeled_text(description: str, field_name: str) -> Optional[str]:
 def extract_required_inputs(description: str) -> Dict[str, str]:
     """Extract issue key (optional), problem brief, and solution brief."""
     issue_key = extract_labeled_text(description, "issue key") or ""
+    if not issue_key:
+        issue_match = re.search(r"\b[A-Z][A-Z0-9]+-\d+\b", description)
+        if issue_match:
+            issue_key = issue_match.group(0)
     problem_brief = extract_labeled_text(description, "problem brief")
     solution_brief = extract_labeled_text(description, "solution brief")
 
