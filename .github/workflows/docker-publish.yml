@@ -1,15 +1,18 @@
 name: Docker Publish
 
 on:
-  push:
+  workflow_run:
+    workflows:
+      - Run Tests
+    types:
+      - completed
     branches:
       - main
-    tags:
-      - "v*"
   workflow_dispatch:
 
 jobs:
   publish:
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -18,6 +21,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
