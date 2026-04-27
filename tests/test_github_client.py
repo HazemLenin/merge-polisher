@@ -84,3 +84,13 @@ def test_build_auth_headers_requires_token(monkeypatch) -> None:
     monkeypatch.delenv("GITHUB_TOKEN", raising=False)
     with pytest.raises(SystemExit):
         github_client.build_auth_headers()
+
+
+def test_normalize_inline_suggestion_code_trims_trailing_newline() -> None:
+    out = github_client.normalize_inline_suggestion_code(
+        mr_changes={"changes": []},
+        file_path="src/app.py",
+        new_line=10,
+        suggested_code="if ok:\n    return 1\n",
+    )
+    assert out == "if ok:\n    return 1"

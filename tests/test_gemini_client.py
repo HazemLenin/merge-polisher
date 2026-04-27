@@ -54,6 +54,9 @@ def test_build_single_call_prompt_contains_inputs():
     assert "GAP-1" in prompt
     assert "diff here" in prompt
     assert json.dumps(ctx, ensure_ascii=True) in prompt
+    assert "summary must be a concise full sentence" in prompt
+    assert "suggested_code can be multiline" in prompt
+    assert "Do not include unchanged surrounding lines" in prompt
 
 
 def test_build_single_call_prompt_includes_only_requested_sections():

@@ -135,6 +135,8 @@ def publish_inline_suggestions_if_enabled(
     for suggestion in generated_suggestions:
         file_path = suggestion["file_path"]
         new_line = suggestion["new_line"]
+        summary = str(suggestion.get("summary") or "").strip()
+        suggested_code = str(suggestion.get("suggested_code") or "")
         normalized_path = file_path.replace("\\", "/")
         allowed_lines = (
             changed_new_lines.get(normalized_path)
@@ -144,9 +146,15 @@ def publish_inline_suggestions_if_enabled(
         if new_line not in allowed_lines:
             log(f"Skipping suggestion (not a changed line): {file_path}:{new_line}")
             continue
+        if not summary:
+            log(f"Skipping suggestion (missing summary): {file_path}:{new_line}")
+            continue
         aligned_code = normalize_inline_suggestion_code(
-            mr_changes, normalized_path, new_line, suggestion["suggested_code"]
+            mr_changes, normalized_path, new_line, suggested_code
         )
+        if not aligned_code.strip():
+            log(f"Skipping suggestion (empty suggested_code after normalization): {file_path}:{new_line}")
+            continue
         try:
             create_mr_inline_discussion(
                 endpoint=mr_endpoint,
@@ -154,7 +162,7 @@ def publish_inline_suggestions_if_enabled(
                 file_path=normalized_path,
                 new_line=new_line,
                 versions=versions,
-                summary=suggestion["summary"],
+                summary=summary,
                 suggested_code=aligned_code,
             )
             posted += 1

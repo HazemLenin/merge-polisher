@@ -82,8 +82,10 @@ def build_single_call_prompt(
             [
                 f"- Max {MAX_INLINE_SUGGESTIONS} suggestions.",
                 "- Suggestions must target changed lines only.",
-                "- For suggested_code: preserve correct relative indentation (nested blocks). "
-                "The pipeline may adjust outer indent to match the file, but inner indentation must be consistent and valid.",
+                "- Each suggestion summary must be a concise full sentence (minimum one sentence, maximum two).",
+                "- suggested_code can be multiline and must contain only the exact replacement snippet.",
+                "- Do not include unchanged surrounding lines in suggested_code.",
+                "- Preserve valid indentation and internal block structure in suggested_code.",
             ]
         )
     if plan.request_description:

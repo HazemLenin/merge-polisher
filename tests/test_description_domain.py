@@ -16,7 +16,12 @@ from domain.description.normalization import (
 
 def test_normalize_suggestions_filters_invalid():
     raw = [
-        {"file_path": "a.py", "summary": "ok", "suggested_code": "x", "new_line": 1},
+        {
+            "file_path": "a.py",
+            "summary": "This improves readability and keeps behavior unchanged.",
+            "suggested_code": "x",
+            "new_line": 1,
+        },
         {"file_path": "", "summary": "bad", "suggested_code": "x", "new_line": 1},
         "not-a-dict",
         {"file_path": "b.py", "summary": "bad", "suggested_code": "x", "new_line": 0},
@@ -30,14 +35,43 @@ def test_normalize_suggestions_caps_at_max():
     raw = [
         {
             "file_path": f"f{i}.py",
-            "summary": "s",
-            "suggested_code": "c",
+            "summary": "This keeps the logic explicit and easier to test.",
+            "suggested_code": "line1\nline2",
             "new_line": 1,
         }
         for i in range(MAX_INLINE_SUGGESTIONS + 5)
     ]
     out = normalize_suggestions(raw)
     assert len(out) == MAX_INLINE_SUGGESTIONS
+
+
+def test_normalize_suggestions_rejects_non_sentence_summary():
+    out = normalize_suggestions(
+        [
+            {
+                "file_path": "x.py",
+                "summary": "too short",
+                "suggested_code": "x = 1",
+                "new_line": 1,
+            }
+        ]
+    )
+    assert out == []
+
+
+def test_normalize_suggestions_accepts_multiline_code():
+    out = normalize_suggestions(
+        [
+            {
+                "file_path": "x.py",
+                "summary": "This handles both branches and keeps return values consistent.",
+                "suggested_code": "if ok:\n    return 1\nreturn 0",
+                "new_line": 10,
+            }
+        ]
+    )
+    assert len(out) == 1
+    assert "\n" in out[0]["suggested_code"]
 
 
 def test_normalize_effect_tags_dedupes_and_filters():

@@ -207,14 +207,6 @@ def build_changed_new_lines(mr_changes: Dict) -> Dict[str, Set[int]]:
     return results
 
 
-def _leading_whitespace_prefix(line: str) -> str:
-    """Return leading spaces and tabs on a line."""
-    index = 0
-    while index < len(line) and line[index] in " \t":
-        index += 1
-    return line[:index]
-
-
 def _normalize_repo_path(path: str) -> str:
     return path.replace("\\", "/").strip()
 
@@ -257,43 +249,12 @@ def get_plus_line_content_at(
     return None
 
 
-def align_suggested_code_indent(reference_line: str, suggested_code: str) -> str:
-    """
-    Align suggestion block to the reference line's leading whitespace.
-
-    GitLab applies ```suggestion``` as a literal replacement; outer indent must
-    match the file. Models often omit indentation, which breaks Python.
-    """
-    ref_prefix = _leading_whitespace_prefix(reference_line)
-    raw = suggested_code.rstrip("\n")
-    if not raw.strip():
-        return suggested_code.rstrip()
-
-    lines = raw.split("\n")
-    first_non_empty = next((ln for ln in lines if ln.strip()), "")
-    strip_count = len(_leading_whitespace_prefix(first_non_empty))
-
-    adjusted: List[str] = []
-    for ln in lines:
-        if not ln.strip():
-            adjusted.append("")
-            continue
-        ws = _leading_whitespace_prefix(ln)
-        if len(ws) >= strip_count:
-            adjusted.append(ref_prefix + ln[strip_count:])
-            continue
-        adjusted.append(ref_prefix + ln.lstrip(" \t"))
-    return "\n".join(adjusted)
-
-
 def normalize_inline_suggestion_code(
     mr_changes: Dict, file_path: str, new_line: int, suggested_code: str
 ) -> str:
-    """Best-effort indent fix for inline suggestions using MR diff context."""
-    reference = get_plus_line_content_at(mr_changes, file_path, new_line)
-    if reference is None:
-        return suggested_code
-    return align_suggested_code_indent(reference, suggested_code)
+    """Pass through model suggestion content with lightweight newline cleanup."""
+    _ = get_plus_line_content_at(mr_changes, file_path, new_line)
+    return suggested_code.rstrip("\n")
 
 
 def create_mr_inline_discussion(

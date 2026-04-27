@@ -5,6 +5,20 @@ from typing import Any
 from core.constants import ALLOWED_EFFECT_TAGS, ALLOWED_RISK_LEVELS, MAX_INLINE_SUGGESTIONS
 
 
+def _is_sentence_summary(summary: str) -> bool:
+    """Require concise, sentence-like summaries (1-2 sentences)."""
+    normalized = " ".join(summary.split())
+    if not normalized:
+        return False
+    words = [word for word in normalized.split(" ") if word]
+    if len(words) < 4:
+        return False
+    sentence_marks = [char for char in normalized if char in ".!?"]
+    if not sentence_marks:
+        return False
+    return len(sentence_marks) <= 2
+
+
 def normalize_suggestions(raw_suggestions: object) -> list[dict]:
     """Normalize and validate model suggestions with conservative filtering."""
     if not isinstance(raw_suggestions, list):
@@ -23,6 +37,8 @@ def normalize_suggestions(raw_suggestions: object) -> list[dict]:
         except (TypeError, ValueError):
             continue
         if not file_path or not summary or not suggested_code or new_line <= 0:
+            continue
+        if not _is_sentence_summary(summary):
             continue
         normalized.append(
             {

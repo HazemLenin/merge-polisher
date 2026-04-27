@@ -6,7 +6,6 @@ from unittest.mock import MagicMock, patch
 
 import adapters.gitlab.client as gitlab_client
 from adapters.gitlab.client import (
-    align_suggested_code_indent,
     build_changed_new_lines,
     build_diff_context,
     build_mr_endpoint,
@@ -41,16 +40,9 @@ def test_build_changed_new_lines_from_unified_diff(minimal_mr_changes):
     assert lines["src/service/foo.py"] == {1, 2}
 
 
-def test_align_suggested_code_indent_adds_reference_prefix():
-    ref = "    return 1"
-    suggested = "return 2"
-    out = align_suggested_code_indent(ref, suggested)
-    assert out.startswith("    return 2")
-
-
 def test_normalize_inline_suggestion_code_without_match(minimal_mr_changes):
     out = normalize_inline_suggestion_code(
-        minimal_mr_changes, "src/service/foo.py", 99, "x = 1"
+        minimal_mr_changes, "src/service/foo.py", 99, "x = 1\n"
     )
     assert out == "x = 1"
 
