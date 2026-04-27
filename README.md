@@ -25,7 +25,7 @@
     <img alt="last commit" src="https://badgen.net/github/last-commit/HazemLenin/merge-polisher?label=last%20commit" />
   </a>
   <a href="https://github.com/HazemLenin/merge-polisher">
-    <img alt="repo size" src="https://img.shields.io/github/repo-size/HazemLenin/merge-polisher?style=for-the-badge&cacheSeconds=300" />
+    <img alt="repo size" src="https://img.shields.io/github/repo-size/HazemLenin/merge-polisher?label=repo%20size&cacheSeconds=300" />
   </a>
   <a href="https://github.com/HazemLenin/merge-polisher/blob/main/LICENSE">
     <img alt="license" src="https://badgen.net/github/license/HazemLenin/merge-polisher?label=license" />
