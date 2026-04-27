@@ -92,7 +92,7 @@ def publish_description_if_enabled(
     if policy.description_enabled:
         if not generated_description:
             fail("Gemini response is missing 'description_markdown' while description is enabled.")
-        log("Updating merge request description in GitLab...")
+        log("Updating merge request description...")
         update_mr_description(mr_endpoint, headers, generated_description)
         log("MR description was successfully enhanced and updated.")
         return
