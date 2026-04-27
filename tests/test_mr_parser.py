@@ -30,16 +30,14 @@ def test_extract_required_inputs_success(minimal_mr_description):
     assert "fixed" in data["solution_brief"].lower()
 
 
-def test_extract_required_inputs_missing_issue(monkeypatch):
-    def boom(msg: str, code: int = 1) -> None:
-        raise RuntimeError(msg)
-
-    monkeypatch.setattr(mr_parser, "fail", boom)
+def test_extract_required_inputs_missing_issue_is_allowed():
     body = """
 ### Problem Brief
 p
 ### Solution Brief
 s
 """
-    with pytest.raises(RuntimeError, match="issue key"):
-        extract_required_inputs(body)
+    data = extract_required_inputs(body)
+    assert data["issue_key"] == ""
+    assert data["problem_brief"] == "p"
+    assert data["solution_brief"] == "s"

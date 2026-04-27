@@ -1,12 +1,10 @@
 """Shared constants for the auto-descriptor pipeline."""
-
-import re
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 GITLAB_DIR = SCRIPT_DIR.parents[2]
 LLM_GUIDE_PATH = GITLAB_DIR / "mr_description_llm.md"
-DEFAULT_TEMPLATE_PATH = SCRIPT_DIR.parents[1] / "markdown" / "DefaultTemplate.md"
+DEFAULT_TEMPLATE_PATH = SCRIPT_DIR.parents[1] / "markdown" / "DefaultTemplateOutput.md"
 
 DEFAULT_PRIMARY_MODEL = "gemini-3-flash-preview"
 DEFAULT_ALT_MODEL = "gemini-2.5-flash"
@@ -21,7 +19,7 @@ SUGGESTIONS_OPT_IN_MARKER = "<!-- auto-review:on -->"
 CONFIDENCE_COMMENT_OPT_IN_MARKER = "<!-- auto-confidence-comment:on -->"
 CONFIDENCE_COMMENT_SIGNATURE = "<!-- auto-descriptor:confidence-comment -->"
 CONFIDENCE_COMMENT_HEAD_SHA_PREFIX = "<!-- auto-descriptor:confidence-head-sha:"
-REQUIRED_EXTRACTED_FIELDS = ("issue_key", "problem_brief", "solution_brief")
+REQUIRED_EXTRACTED_FIELDS = ("problem_brief", "solution_brief")
 
 ALLOWED_EFFECT_TAGS = ("bugfix", "feature", "refactor", "perf", "security", "docs")
 ALLOWED_RISK_LEVELS = ("low", "medium", "high", "critical")
@@ -88,7 +86,6 @@ TEST_PATH_HINTS = (
 
 REQUIRED_TEMPLATE_MARKERS = [
     "### Summary",
-    "### Issue Key",
     "### Problem Brief",
     "### Solution Brief",
     "### How to Test",
@@ -96,4 +93,7 @@ REQUIRED_TEMPLATE_MARKERS = [
     "- [ ] I have tested these changes",
 ]
 
-ISSUE_PATTERN = re.compile(r"\b(?:GAP|GB)-\d+\b", re.IGNORECASE)
+OPTIONAL_TEMPLATE_MARKERS = [
+    "### Issue Key",
+]
+

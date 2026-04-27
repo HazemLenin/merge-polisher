@@ -3,7 +3,7 @@
 import re
 from typing import Dict, Optional
 
-from core.constants import ISSUE_PATTERN, REQUIRED_TEMPLATE_MARKERS
+from core.constants import REQUIRED_TEMPLATE_MARKERS
 from core.runtime import fail
 
 
@@ -29,14 +29,11 @@ def extract_labeled_text(description: str, field_name: str) -> Optional[str]:
 
 
 def extract_required_inputs(description: str) -> Dict[str, str]:
-    """Extract issue key, problem brief, and solution brief; fail if missing."""
-    issue_match = ISSUE_PATTERN.search(description)
-    issue_key = issue_match.group(0).upper() if issue_match else ""
+    """Extract issue key (optional), problem brief, and solution brief."""
+    issue_key = extract_labeled_text(description, "issue key") or ""
     problem_brief = extract_labeled_text(description, "problem brief")
     solution_brief = extract_labeled_text(description, "solution brief")
 
-    if not issue_key:
-        fail("Could not find issue key in MR description. Expected GAP-XXXX or GB-XXXX.")
     if not problem_brief:
         fail(
             "Could not find 'problem brief' in MR description. "

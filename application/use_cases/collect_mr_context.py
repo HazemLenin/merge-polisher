@@ -112,7 +112,7 @@ def validate_template_and_inputs(
         fail(
             "Missing extracted inputs while strict marker path is enabled. "
             f"Missing/blank fields: {extracted_missing_fields}. "
-            "Expected non-empty issue_key, problem_brief, and solution_brief."
+            "Expected non-empty problem_brief and solution_brief."
         )
     if extracted_missing_fields and policy.confidence_history_only_mode:
         log(

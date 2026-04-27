@@ -132,15 +132,16 @@ def validate_extracted_inputs(
 ) -> ExtractedInputs:
     """Validate extracted fields for prompt generation."""
     normalized = {field: str(extracted.get(field, "") or "").strip() for field in REQUIRED_EXTRACTED_FIELDS}
+    issue_key = str(extracted.get("issue_key", "") or "").strip()
     missing_fields = [field for field, value in normalized.items() if not value]
     if missing_fields and not allow_missing_extracted:
         fail(
             "Extracted MR inputs are required in strict mode, but missing/blank fields were found: "
             f"{missing_fields}. "
-            "Expected non-empty issue_key, problem_brief, and solution_brief."
+            "Expected non-empty problem_brief and solution_brief."
         )
     return {
-        "issue_key": normalized["issue_key"],
+        "issue_key": issue_key,
         "problem_brief": normalized["problem_brief"],
         "solution_brief": normalized["solution_brief"],
     }

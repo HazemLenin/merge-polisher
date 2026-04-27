@@ -70,4 +70,4 @@ def test_validate_extraction_requirements_allows_missing_in_history_only() -> No
         history_only,
         {"issue_key": "", "problem_brief": "", "solution_brief": ""},
     )
-    assert missing == ["issue_key", "problem_brief", "solution_brief"]
+    assert missing == ["problem_brief", "solution_brief"]
