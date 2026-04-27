@@ -4,6 +4,7 @@
   <img src="assets/Logo%20Rounded.png" alt="merge_polisher logo" width="220" />
 </p>
 
+<!-- Repo Badges -->
 <p align="center">
   <a href="https://github.com/HazemLenin/merge-polisher/stargazers">
     <img alt="stars" src="https://img.shields.io/github/stars/HazemLenin/merge-polisher?style=for-the-badge" />
@@ -31,6 +32,7 @@
   </a>
 </p>
 
+<!-- Tech Badges -->
 <p align="center">
   <img alt="python" src="https://img.shields.io/badge/Python-3.13+-3776AB?logo=python&logoColor=white" />
   <img alt="ci" src="https://img.shields.io/badge/CI-GitHub_Actions-2088FF?logo=githubactions&logoColor=white" />
