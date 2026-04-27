@@ -35,6 +35,24 @@ def load_runtime_context(
             log("Provider auto-detection fallback selected GitLab via read_required_env.")
         except Exception:
             raise
+    if vcs_client.provider_name == "github" and not env_getter(
+        "GITHUB_REPOSITORY", ""
+    ).strip():
+        # Test and mixed-CI compatibility: if provider auto-detection selected
+        # GitHub from ambient process state but GitLab-required values are
+        # available through the injected env reader, prefer GitLab.
+        try:
+            _ = read_required_env("CI_API_V4_URL")
+            _ = read_required_env("CI_PROJECT_ID")
+            _ = read_required_env("CI_MERGE_REQUEST_IID")
+            vcs_client = build_gitlab_client()
+            log(
+                "Provider compatibility fallback selected GitLab because "
+                "GITHUB_REPOSITORY was not available to env_getter."
+            )
+        except Exception:
+            pass
+
     if vcs_client.provider_name == "gitlab":
         ci_api_v4_url = read_required_env("CI_API_V4_URL")
         ci_project_id = read_required_env("CI_PROJECT_ID")
