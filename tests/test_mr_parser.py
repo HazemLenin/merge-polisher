@@ -25,7 +25,7 @@ def test_extract_labeled_text_header_style():
 
 def test_extract_required_inputs_success(minimal_mr_description):
     data = extract_required_inputs(minimal_mr_description)
-    assert data["issue_key"] == "GAP-1000"
+    assert data["issue_key"] == "XX-1000"
     assert "broken" in data["problem_brief"].lower()
     assert "fixed" in data["solution_brief"].lower()
 

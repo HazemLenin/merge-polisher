@@ -78,7 +78,7 @@ def _build_description(*markers: str) -> str:
 Short summary.
 
 ### Issue Key
-GAP-1000
+XX-1000
 
 ### Problem Brief
 Problem text.
@@ -126,7 +126,7 @@ def test_trigger_descriptor_marker_only_updates_description(
 
     _setup_common(monkeypatch, description, minimal_mr_changes, [])
     monkeypatch.setattr(app_mod, "extract_required_inputs", lambda _d: {
-        "issue_key": "GAP-1000",
+        "issue_key": "XX-1000",
         "problem_brief": "Problem text.",
         "solution_brief": "Solution text.",
     })
@@ -162,7 +162,7 @@ def test_trigger_auto_review_marker_only_posts_inline_only(
 
     _setup_common(monkeypatch, description, minimal_mr_changes, [])
     monkeypatch.setattr(app_mod, "extract_required_inputs", lambda _d: {
-        "issue_key": "GAP-1000",
+        "issue_key": "XX-1000",
         "problem_brief": "Problem text.",
         "solution_brief": "Solution text.",
     })
@@ -210,7 +210,7 @@ def test_trigger_confidence_marker_only_posts_confidence_only(
     _setup_common(monkeypatch, description, minimal_mr_changes, [])
     monkeypatch.setenv("CI_COMMIT_SHA", "sha-1")
     monkeypatch.setattr(app_mod, "extract_required_inputs", lambda _d: {
-        "issue_key": "GAP-1000",
+        "issue_key": "XX-1000",
         "problem_brief": "Problem text.",
         "solution_brief": "Solution text.",
     })
@@ -281,7 +281,7 @@ def test_trigger_history_with_confidence_marker_adds_confidence_only(
     _setup_common(monkeypatch, description, minimal_mr_changes, existing)
     monkeypatch.setenv("CI_COMMIT_SHA", "new-sha")
     monkeypatch.setattr(app_mod, "extract_required_inputs", lambda _d: {
-        "issue_key": "GAP-1000",
+        "issue_key": "XX-1000",
         "problem_brief": "Problem text.",
         "solution_brief": "Solution text.",
     })

@@ -21,7 +21,7 @@
 
 > Why does this change exist? Useful for bug fixes, regressions, or ticket-backed work.
 
-**Closes #GAP-XXXX**
+**Closes #XX-XXXX** <!-- if there's an issue key mentioned -->
 
 - **Related issue(s):**
 - **Symptoms / user pain:**

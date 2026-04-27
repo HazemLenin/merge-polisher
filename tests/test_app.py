@@ -412,7 +412,7 @@ def test_run_builds_plan_and_requests_only_enabled_sections(
 Short summary.
 
 ### Issue Key
-GAP-1234
+XX-1234
 
 ### Problem Brief
 Problem.

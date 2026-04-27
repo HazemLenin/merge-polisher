@@ -37,7 +37,7 @@ def test_validate_models_rejects_other(monkeypatch):
 
 def test_build_single_call_prompt_contains_inputs():
     extracted = {
-        "issue_key": "GAP-1",
+        "issue_key": "XX-1",
         "problem_brief": "pb",
         "solution_brief": "sb",
     }
@@ -51,7 +51,7 @@ def test_build_single_call_prompt_contains_inputs():
         confidence_context=ctx,
         plan=FULL_PLAN,
     )
-    assert "GAP-1" in prompt
+    assert "XX-1" in prompt
     assert "diff here" in prompt
     assert json.dumps(ctx, ensure_ascii=True) in prompt
     assert "summary must be a concise full sentence" in prompt
@@ -60,7 +60,7 @@ def test_build_single_call_prompt_contains_inputs():
 
 
 def test_build_single_call_prompt_includes_only_requested_sections():
-    extracted = {"issue_key": "GAP-1", "problem_brief": "pb", "solution_brief": "sb"}
+    extracted = {"issue_key": "XX-1", "problem_brief": "pb", "solution_brief": "sb"}
     ctx = {"score": 7.5, "reasons": [], "signals": {}}
     prompt = build_single_call_prompt(
         current_description="desc",
@@ -93,7 +93,7 @@ def test_generate_enhancement_payload_primary_success(monkeypatch):
         current_description="d",
         output_template="t",
         llm_guide="g",
-        extracted={"issue_key": "GAP-1", "problem_brief": "p", "solution_brief": "s"},
+        extracted={"issue_key": "XX-1", "problem_brief": "p", "solution_brief": "s"},
         diff_context="",
         confidence_context={"score": 1, "signals": {}, "reasons": []},
         plan=GenerationPlan(request_description=True, request_review=True, request_confidence=False),
@@ -117,7 +117,7 @@ def test_generate_enhancement_payload_fallback_on_api_error(monkeypatch):
         current_description="d",
         output_template="t",
         llm_guide="g",
-        extracted={"issue_key": "GAP-1", "problem_brief": "p", "solution_brief": "s"},
+        extracted={"issue_key": "XX-1", "problem_brief": "p", "solution_brief": "s"},
         diff_context="",
         confidence_context={"score": 1, "signals": {}, "reasons": []},
         plan=GenerationPlan(request_description=True, request_review=True, request_confidence=False),
@@ -141,7 +141,7 @@ def test_generate_enhancement_payload_fails_when_both_models_fail(monkeypatch):
             current_description="d",
             output_template="t",
             llm_guide="g",
-            extracted={"issue_key": "GAP-1", "problem_brief": "p", "solution_brief": "s"},
+            extracted={"issue_key": "XX-1", "problem_brief": "p", "solution_brief": "s"},
             diff_context="",
             confidence_context={"score": 1, "signals": {}, "reasons": []},
             plan=GenerationPlan(request_description=True, request_review=True, request_confidence=False),
@@ -165,7 +165,7 @@ def test_generate_enhancement_payload_does_not_fallback_on_parse_error(monkeypat
             current_description="d",
             output_template="t",
             llm_guide="g",
-            extracted={"issue_key": "GAP-1", "problem_brief": "p", "solution_brief": "s"},
+            extracted={"issue_key": "XX-1", "problem_brief": "p", "solution_brief": "s"},
             diff_context="",
             confidence_context={"score": 1, "signals": {}, "reasons": []},
             plan=GenerationPlan(request_description=True, request_review=True, request_confidence=False),

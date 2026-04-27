@@ -53,10 +53,6 @@ def minimal_mr_description() -> str:
 
 Short summary.
 
-### Issue Key
-
-GAP-1000
-
 ### Problem Brief
 
 Something was broken.
@@ -71,7 +67,7 @@ We fixed it.
 
 ### Checklist
 
-- [ ] MR title includes `GAP-XXXX`
+- [ ] MR title includes `XX-XXXX`
 - [ ] I have tested these changes
 """
 
@@ -85,7 +81,7 @@ Manual MR.
 
 ### Issue Key
 
-GAP-2000
+XX-2000
 
 ### Problem Brief
 
