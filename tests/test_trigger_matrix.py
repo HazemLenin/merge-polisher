@@ -171,7 +171,7 @@ def test_trigger_auto_review_marker_only_posts_inline_only(
         {
             "file_path": "src/service/foo.py",
             "new_line": 1,
-            "summary": "nit",
+            "summary": "This keeps the change explicit and easier to review.",
             "suggested_code": "line one",
         }
     ]
