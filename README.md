@@ -7,28 +7,28 @@
 <!-- Repo Badges -->
 <p align="center">
   <a href="https://github.com/HazemLenin/merge-polisher/stargazers">
-    <img alt="stars" src="https://img.shields.io/github/stars/HazemLenin/merge-polisher?style=for-the-badge" />
+    <img alt="stars" src="https://badgen.net/github/stars/HazemLenin/merge-polisher?label=stars" />
   </a>
   <a href="https://github.com/HazemLenin/merge-polisher/network/members">
-    <img alt="forks" src="https://img.shields.io/github/forks/HazemLenin/merge-polisher?style=for-the-badge" />
+    <img alt="forks" src="https://badgen.net/github/forks/HazemLenin/merge-polisher?label=forks" />
   </a>
   <a href="https://github.com/HazemLenin/merge-polisher/watchers">
-    <img alt="watchers" src="https://img.shields.io/github/watchers/HazemLenin/merge-polisher?style=for-the-badge" />
+    <img alt="watchers" src="https://badgen.net/github/watchers/HazemLenin/merge-polisher?label=watchers" />
   </a>
   <a href="https://github.com/HazemLenin/merge-polisher/issues">
-    <img alt="issues" src="https://img.shields.io/github/issues/HazemLenin/merge-polisher?style=for-the-badge" />
+    <img alt="issues" src="https://badgen.net/github/open-issues/HazemLenin/merge-polisher?label=issues" />
   </a>
   <a href="https://github.com/HazemLenin/merge-polisher/pulls">
-    <img alt="pull requests" src="https://img.shields.io/github/issues-pr/HazemLenin/merge-polisher?style=for-the-badge" />
+    <img alt="pull requests" src="https://badgen.net/github/prs/HazemLenin/merge-polisher?label=pull%20requests" />
   </a>
   <a href="https://github.com/HazemLenin/merge-polisher/commits/main">
-    <img alt="last commit" src="https://img.shields.io/github/last-commit/HazemLenin/merge-polisher?style=for-the-badge" />
+    <img alt="last commit" src="https://badgen.net/github/last-commit/HazemLenin/merge-polisher?label=last%20commit" />
   </a>
   <a href="https://github.com/HazemLenin/merge-polisher">
-    <img alt="repo size" src="https://img.shields.io/github/repo-size/HazemLenin/merge-polisher?style=for-the-badge" />
+    <img alt="repo size" src="https://img.shields.io/github/repo-size/HazemLenin/merge-polisher?style=for-the-badge&cacheSeconds=300" />
   </a>
   <a href="https://github.com/HazemLenin/merge-polisher/blob/main/LICENSE">
-    <img alt="license" src="https://img.shields.io/github/license/HazemLenin/merge-polisher?style=for-the-badge" />
+    <img alt="license" src="https://badgen.net/github/license/HazemLenin/merge-polisher?label=license" />
   </a>
 </p>
 
