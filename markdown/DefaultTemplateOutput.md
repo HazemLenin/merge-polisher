@@ -54,5 +54,5 @@
 
 ### Checklist
 
-- [ ] MR title includes `GAP-XXXX`
+- [ ] MR title includes `XXX-XXXX` <!-- if there's an issue key mentioned -->
 - [ ] I have tested these changes

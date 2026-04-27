@@ -1,10 +1,31 @@
 """Shared constants for the auto-descriptor pipeline."""
+import os
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-GITLAB_DIR = SCRIPT_DIR.parents[2]
-LLM_GUIDE_PATH = GITLAB_DIR / "mr_description_llm.md"
-DEFAULT_TEMPLATE_PATH = SCRIPT_DIR.parents[1] / "markdown" / "DefaultTemplateOutput.md"
+REPO_ROOT = SCRIPT_DIR.parent
+DEFAULT_TEMPLATE_PATH = REPO_ROOT / "markdown" / "DefaultTemplateOutput.md"
+
+
+def _resolve_llm_guide_path() -> Path:
+    """Resolve LLM guide: env override, repo bundled files, then legacy monorepo layout."""
+    override = os.getenv("MERGE_POLISHER_LLM_GUIDE_PATH", "").strip()
+    if override:
+        return Path(override).expanduser()
+    bundled_md = REPO_ROOT / "markdown" / "mr_description_llm.md"
+    bundled_root = REPO_ROOT / "mr_description_llm.md"
+    if bundled_md.is_file():
+        return bundled_md
+    if bundled_root.is_file():
+        return bundled_root
+    if len(SCRIPT_DIR.parents) > 2:
+        legacy = SCRIPT_DIR.parents[2] / "mr_description_llm.md"
+        if legacy.is_file():
+            return legacy
+    return bundled_md
+
+
+LLM_GUIDE_PATH = _resolve_llm_guide_path()
 
 DEFAULT_PRIMARY_MODEL = "gemini-3-flash-preview"
 DEFAULT_ALT_MODEL = "gemini-2.5-flash"
