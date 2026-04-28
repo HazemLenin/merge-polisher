@@ -74,6 +74,22 @@ def test_normalize_suggestions_accepts_multiline_code():
     assert "\n" in out[0]["suggested_code"]
 
 
+def test_normalize_suggestions_preserves_leading_indentation():
+    out = normalize_suggestions(
+        [
+            {
+                "file_path": "x.py",
+                "summary": "This keeps the branch body indented to remain valid Python syntax.",
+                "suggested_code": "    return build_game_orchestrator().run()\n",
+                "new_line": 10,
+            }
+        ]
+    )
+    assert len(out) == 1
+    assert out[0]["suggested_code"].startswith("    ")
+    assert out[0]["suggested_code"] == "    return build_game_orchestrator().run()\n"
+
+
 def test_normalize_effect_tags_dedupes_and_filters():
     assert normalize_effect_tags(["bugfix", "INVALID", "Bugfix", "feature"]) == [
         "bugfix",

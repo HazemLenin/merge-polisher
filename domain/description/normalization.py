@@ -30,7 +30,7 @@ def normalize_suggestions(raw_suggestions: object) -> list[dict]:
             continue
         file_path = str(item.get("file_path") or "").strip()
         summary = str(item.get("summary") or "").strip()
-        suggested_code = str(item.get("suggested_code") or "").strip()
+        suggested_code = str(item.get("suggested_code") or "")
         line_value = item.get("new_line")
         try:
             new_line = int(line_value)
