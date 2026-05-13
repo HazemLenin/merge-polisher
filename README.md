@@ -1,15 +1,52 @@
 # Merge Polisher
 
+<p align="center">
+  <img src="assets/Logo%20Rounded.png" alt="merge_polisher logo" width="220" />
+</p>
 
+<!-- Repo Badges -->
+<p align="center">
+  <a href="https://github.com/HazemLenin/merge-polisher/stargazers">
+    <img alt="stars" src="https://badgen.net/github/stars/HazemLenin/merge-polisher?label=stars" />
+  </a>
+  <a href="https://github.com/HazemLenin/merge-polisher/network/members">
+    <img alt="forks" src="https://badgen.net/github/forks/HazemLenin/merge-polisher?label=forks" />
+  </a>
+  <a href="https://github.com/HazemLenin/merge-polisher/watchers">
+    <img alt="watchers" src="https://badgen.net/github/watchers/HazemLenin/merge-polisher?label=watchers" />
+  </a>
+  <a href="https://github.com/HazemLenin/merge-polisher/issues">
+    <img alt="issues" src="https://badgen.net/github/open-issues/HazemLenin/merge-polisher?label=issues" />
+  </a>
+  <a href="https://github.com/HazemLenin/merge-polisher/pulls">
+    <img alt="pull requests" src="https://badgen.net/github/prs/HazemLenin/merge-polisher?label=pull%20requests" />
+  </a>
+  <a href="https://github.com/HazemLenin/merge-polisher/commits/main">
+    <img alt="last commit" src="https://badgen.net/github/last-commit/HazemLenin/merge-polisher?label=last%20commit" />
+  </a>
+  <a href="https://github.com/HazemLenin/merge-polisher">
+    <img alt="repo size" src="https://img.shields.io/github/repo-size/HazemLenin/merge-polisher?label=repo%20size&cacheSeconds=300" />
+  </a>
+  <a href="https://github.com/HazemLenin/merge-polisher/blob/main/LICENSE">
+    <img alt="license" src="https://badgen.net/github/license/HazemLenin/merge-polisher?label=license" />
+  </a>
+</p>
 
-
-
-
-
-
-
-
-
+<!-- Tech Badges -->
+<p align="center">
+  <img alt="python" src="https://img.shields.io/badge/Python-3.13+-3776AB?logo=python&logoColor=white" />
+  <img alt="ci" src="https://img.shields.io/badge/CI-GitHub_Actions-2088FF?logo=githubactions&logoColor=white" />
+  <img alt="docker" src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" />
+  <img alt="llm" src="https://img.shields.io/badge/LLM-Gemini-8E75B2" />
+  <img alt="provider-gitlab" src="https://img.shields.io/badge/VCS-GitLab-FC6D26?logo=gitlab&logoColor=white" />
+  <img alt="provider-github" src="https://img.shields.io/badge/VCS-GitHub-181717?logo=github&logoColor=white" />
+  <img alt="mr-pr" src="https://img.shields.io/badge/MR%2FPR-Auto_Polish-0EA5E9" />
+  <img alt="description" src="https://img.shields.io/badge/Description-Auto_Update-10B981" />
+  <img alt="review" src="https://img.shields.io/badge/Inline_Review-Suggestions-14B8A6" />
+  <img alt="confidence" src="https://img.shields.io/badge/Confidence-Comment-7C3AED" />
+  <img alt="template" src="https://img.shields.io/badge/Template-Validated-6366F1" />
+  <img alt="policy" src="https://img.shields.io/badge/Policy-Marker_Driven-F59E0B" />
+</p>
 AI-assisted MR/PR description polisher for CI pipelines.
 
 Merge Polisher reads merge/pull request description, validates template sections, analyzes changed files, asks Gemini for structured improvements, then can publish:
