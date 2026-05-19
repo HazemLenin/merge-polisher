@@ -7,6 +7,7 @@ import pytest
 import adapters.llm.gemini_client as gemini_client
 from core.constants import DEFAULT_ALT_MODEL, DEFAULT_PRIMARY_MODEL
 from adapters.llm.gemini_client import (
+    _is_high_demand_error,
     build_single_call_prompt,
     generate_enhancement_payload,
     validate_extracted_inputs,
@@ -123,6 +124,56 @@ def test_generate_enhancement_payload_fallback_on_api_error(monkeypatch):
         plan=GenerationPlan(request_description=True, request_review=True, request_confidence=False),
     )
     assert out["description"]["description_markdown"] == "alt"
+
+
+@pytest.mark.parametrize(
+    "error_text",
+    [
+        "503 UNAVAILABLE. {'error': {'code': 503, 'message': 'high demand'}}",
+        "This model is currently experiencing high demand",
+    ],
+)
+def test_is_high_demand_error_detects_capacity_errors(error_text: str):
+    assert _is_high_demand_error(RuntimeError(error_text)) is True
+
+
+def test_is_high_demand_error_rejects_other_api_errors():
+    assert _is_high_demand_error(RuntimeError("500 internal server error")) is False
+
+
+def test_generate_enhancement_payload_exits_gracefully_on_high_demand(monkeypatch):
+    class HighDemandError(Exception):
+        pass
+
+    def high_demand_generate(*_args, **_kwargs):
+        raise HighDemandError(
+            "503 UNAVAILABLE. {'error': {'code': 503, "
+            "'message': 'This model is currently experiencing high demand.'}}"
+        )
+
+    graceful_messages: list[str] = []
+
+    def capture_graceful_exit(message: str) -> None:
+        graceful_messages.append(message)
+        raise SystemExit(0)
+
+    monkeypatch.setattr(gemini_client, "_generate_with_model", high_demand_generate)
+    monkeypatch.setattr(gemini_client, "graceful_exit", capture_graceful_exit)
+    with pytest.raises(SystemExit) as exc_info:
+        generate_enhancement_payload(
+            model_name=DEFAULT_PRIMARY_MODEL,
+            fallback_model_name=DEFAULT_ALT_MODEL,
+            current_description="d",
+            output_template="t",
+            llm_guide="g",
+            extracted={"issue_key": "XX-1", "problem_brief": "p", "solution_brief": "s"},
+            diff_context="",
+            confidence_context={"score": 1, "signals": {}, "reasons": []},
+            plan=GenerationPlan(request_description=True, request_review=True, request_confidence=False),
+        )
+    assert exc_info.value.code == 0
+    assert graceful_messages
+    assert "high demand" in graceful_messages[0].lower()
 
 
 def test_generate_enhancement_payload_fails_when_both_models_fail(monkeypatch):

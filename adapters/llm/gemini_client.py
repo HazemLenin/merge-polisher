@@ -18,7 +18,7 @@ from core.models import (
     GenerationPlan,
     NestedEnhancementPayload,
 )
-from core.runtime import fail, log
+from core.runtime import fail, graceful_exit, log
 
 
 def validate_models(model_name: str, fallback_model_name: str) -> None:
@@ -189,6 +189,12 @@ def generate_enhancement_payload(
         try:
             return _generate_with_model(fallback_model_name, prompt, retries, plan)
         except Exception as fallback_error:  # noqa: BLE001
+            if _is_high_demand_error(fallback_error):
+                graceful_exit(
+                    "Gemini models are temporarily unavailable due to high demand "
+                    f"(primary='{model_name}', fallback='{fallback_model_name}'). "
+                    "Skipping MR enhancement for this run."
+                )
             fail(
                 "Gemini generation failed on primary and fallback models: "
                 f"primary='{model_name}', fallback='{fallback_model_name}', "
@@ -238,6 +244,20 @@ def _parse_nested_payload(payload: dict[str, Any], plan: GenerationPlan) -> Nest
 def _is_api_error(exc: Exception) -> bool:
     """Return True when failure is likely from API/transport layer."""
     return not isinstance(exc, ValueError)
+
+
+def _is_high_demand_error(exc: Exception) -> bool:
+    """Return True when the API reports transient model capacity pressure (503)."""
+    error_code = getattr(exc, "code", None)
+    if error_code is not None and str(error_code) in {"503", "UNAVAILABLE"}:
+        return True
+    status = getattr(exc, "status", None)
+    if status is not None and str(status).upper() == "UNAVAILABLE":
+        return True
+    text = str(exc).lower()
+    if "high demand" in text:
+        return True
+    return "503" in text and "unavailable" in text
 
 
 def _generate_with_model(
